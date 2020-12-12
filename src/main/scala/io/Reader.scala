@@ -1,7 +1,7 @@
 package com.mkobiers.med
 package io
 
-import domain.{Item, Transaction}
+import domain.{Item, Transaction, TransactionId}
 import error.FileNotAccessible
 
 import java.io.File
@@ -14,8 +14,10 @@ object Reader {
   def transactions(file: File): Either[FileNotAccessible, Vector[Transaction]] = {
     Try {
       val source = Source.fromFile(file)
-      val transactions = source.getLines().map(line => Transaction(line.map(Item).toVector)).toVector
-      source.clone()
+      val transactions = source.getLines().zip(Iterator.iterate[Long](0L)(_ + 1L)).map {
+        case (line, idx) => Transaction(TransactionId(idx), line.map(Item).toVector)
+      }.toVector
+      source.close()
       transactions
     }.toEither.left.map(t => FileNotAccessible(t.getMessage))
   }
