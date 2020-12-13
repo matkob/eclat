@@ -17,13 +17,49 @@ object Eclat extends AssociationRulesFinder {
 
   override def associationRules(
       transactions: Vector[Transaction],
-      minSupport: MinSupport
-  ): Either[Throwable, Vector[Rule]] = ???
+      minSupport: MinSupport,
+      minConfidence: MinConfidence
+  ): Vector[Rule] = {
+    val fItemSets = frequentItemSets(transactions, minSupport)
+    fItemSets.keys.filter(_.nonEmpty).foldLeft(Vector.empty[Rule]) {
+      (rlz, itemSet) =>
+        rlz ++ rulesFromItemSet(itemSet, fItemSets, minConfidence)
+    }
+  }
+
+  def rulesFromItemSet(
+      itemSet: ItemSet,
+      itemSetMeta: Map[ItemSet, Support],
+      minConfidence: MinConfidence
+  ): Vector[Rule] = {
+    itemSet.subsets
+      .map(predecessor => predecessor -> itemSet.diff(predecessor))
+      .filter { case (predecessor, successor) =>
+        predecessor.nonEmpty && successor.nonEmpty
+      }
+      .filter { case (predecessor, successor) =>
+        itemSetMeta.contains(predecessor) && itemSetMeta.contains(successor)
+      }
+      .map { case (predecessor, successor) =>
+        val confidence = Confidence(
+          itemSetMeta(itemSet).txs.size / itemSetMeta(predecessor).txs.size
+        )
+        Rule(
+          predecessor,
+          successor,
+          itemSetMeta(itemSet),
+          confidence,
+          Vector.empty[Metric]
+        )
+      }
+      .filter(_.confidence.score > minConfidence.v)
+      .toVector
+  }
 
   override def frequentItemSets(
       transactions: Vector[Transaction],
       minSupport: MinSupport
-  ): Either[Throwable, Map[ItemSet, Support]] = {
+  ): Map[ItemSet, Support] = {
     // operate on raw transaction set only once
     val itemSetMeta: ItemSetMeta      = frequentItems(transactions, minSupport)
     val generators: ItemSetGenerators = itemSetMeta.keys.toVector
@@ -34,7 +70,7 @@ object Eclat extends AssociationRulesFinder {
     ) { case ((generators, meta), itemSetSize) =>
       mergeFrequentItems(generators, meta, minSupport, itemSetSize)
     }
-    Right(support._2.map { case (itemSet, meta) => itemSet -> meta.support })
+    support._2.map { case (itemSet, meta) => itemSet -> meta.support }
   }
 
   def frequentItems(
