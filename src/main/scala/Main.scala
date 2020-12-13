@@ -1,8 +1,7 @@
 package com.mkobiers.med
 
 import algo.Eclat
-import domain.{MinConfidence, MinSupport, Rule}
-import error.FileNotAccessible
+import domain.{FileNotAccessible, MinConfidence, MinSupport, Rule}
 import io.Reader
 
 import java.io.File
@@ -16,7 +15,7 @@ object Main extends App {
         s"provided arguments are wrong or incomplete: ${args.mkString(", ")}"
       )
       1
-    case _: FileNotAccessible =>
+    case FileNotAccessible =>
       println(s"file ${args(0)} is inaccessible")
       1
     case t =>

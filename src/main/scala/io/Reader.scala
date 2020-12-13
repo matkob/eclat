@@ -1,8 +1,7 @@
 package com.mkobiers.med
 package io
 
-import domain.{Item, Transaction, TransactionId}
-import error.FileNotAccessible
+import domain._
 
 import java.io.File
 import scala.io.{Codec, Source}
@@ -13,7 +12,7 @@ object Reader {
 
   def transactions(
       file: File
-  ): Either[FileNotAccessible, Vector[Transaction]] = {
+  ): Either[ApplicationError, Vector[Transaction]] = {
     Try {
       val source = Source.fromFile(file)
       val transactions = source
@@ -25,6 +24,6 @@ object Reader {
         .toVector
       source.close()
       transactions
-    }.toEither.left.map(t => FileNotAccessible(t.getMessage))
+    }.toEither.left.map(_ => FileNotAccessible)
   }
 }
