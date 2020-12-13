@@ -1,7 +1,7 @@
 package com.mkobiers.med
 
 import algo.Eclat
-import domain.{MinConfidence, MinSupport}
+import domain.{MinConfidence, MinSupport, Rule}
 import error.FileNotAccessible
 import io.Reader
 
@@ -24,7 +24,15 @@ object Main extends App {
       1
   }
 
-  val resultMapper: Any => Int = _ => 0
+  val resultMapper: Vector[Rule] => Int = {
+    case rules if rules.nonEmpty =>
+      println(s"association rules found")
+      println(rules.map(rule => Rule.text(rule)).mkString("\n"))
+      0
+    case _ =>
+      println("no association rules found")
+      0
+  }
 
   val result = for {
     input         <- Try(new File(args(0))).toEither
