@@ -5,16 +5,6 @@ import domain._
 
 object Eclat extends AssociationRulesFinder {
 
-  case class ItemSetMetaData(
-      itemSet: ItemSet,
-      support: Support,
-      predecessor: ItemSet,
-      successors: Set[ItemSet] = Set.empty[ItemSet]
-  )
-
-  type ItemSetGenerators = Vector[ItemSet]
-  type ItemSetMeta       = Map[ItemSet, ItemSetMetaData]
-
   override def associationRules(
       transactions: Vector[Transaction],
       minSupport: MinSupport,
@@ -23,14 +13,15 @@ object Eclat extends AssociationRulesFinder {
     val fItemSets = frequentItemSets(transactions, minSupport)
     fItemSets.keys.filter(_.nonEmpty).foldLeft(Vector.empty[Rule]) {
       (rlz, itemSet) =>
-        rlz ++ rulesFromItemSet(itemSet, fItemSets, minConfidence)
+        rlz ++ rulesFromItemSet(itemSet, fItemSets, minConfidence, transactions)
     }
   }
 
   def rulesFromItemSet(
       itemSet: ItemSet,
-      itemSetMeta: Map[ItemSet, Support],
-      minConfidence: MinConfidence
+      itemSetSupport: Map[ItemSet, Support],
+      minConfidence: MinConfidence,
+      transactions: Vector[Transaction]
   ): Vector[Rule] = {
     itemSet.subsets
       .map(predecessor => predecessor -> itemSet.diff(predecessor))
@@ -38,21 +29,32 @@ object Eclat extends AssociationRulesFinder {
         predecessor.nonEmpty && successor.nonEmpty
       }
       .filter { case (predecessor, successor) =>
-        itemSetMeta.contains(predecessor) && itemSetMeta.contains(successor)
+        itemSetSupport.contains(predecessor) && itemSetSupport.contains(
+          successor
+        )
       }
       .map { case (predecessor, successor) =>
         val confidence = Confidence(
-          itemSetMeta(itemSet).txs.size / itemSetMeta(predecessor).txs.size
+          itemSetSupport(itemSet).txs.size / itemSetSupport(
+            predecessor
+          ).txs.size
+        )
+        val metrics = Metric.calculate(
+          predecessor,
+          successor,
+          confidence,
+          itemSetSupport,
+          transactions
         )
         Rule(
           predecessor,
           successor,
-          itemSetMeta(itemSet),
+          itemSetSupport(itemSet),
           confidence,
-          Vector.empty[Metric]
+          metrics
         )
       }
-      .filter(_.confidence.score > minConfidence.v)
+      .filter(_.confidence.value > minConfidence.value)
       .toVector
   }
 
@@ -67,8 +69,8 @@ object Eclat extends AssociationRulesFinder {
     // merge all item sets with an assumption that maximal size of frequent item set can not exceed maximal tx size
     val _, support = (1 to biggestTx).foldLeft(
       (generators: ItemSetGenerators, itemSetMeta: ItemSetMeta)
-    ) { case ((generators, meta), itemSetSize) =>
-      mergeFrequentItems(generators, meta, minSupport, itemSetSize)
+    ) { case ((generators, meta), _) =>
+      mergeFrequentItems(generators, meta, minSupport)
     }
     support._2.map { case (itemSet, meta) => itemSet -> meta.support }
   }
@@ -95,7 +97,7 @@ object Eclat extends AssociationRulesFinder {
       root -> ItemSetMetaData(root, Support(transactions.map(_.id).toSet), root)
     )
     itemCount.foldLeft(treeLikeMetaData: ItemSetMeta) {
-      case (meta, (item, txs)) if txs.size >= minSupport.n =>
+      case (meta, (item, txs)) if txs.size >= minSupport.value =>
         val singletonItemSet = Set(item)
         val singletonMetaData =
           ItemSetMetaData(singletonItemSet, Support(txs), root)
@@ -110,8 +112,7 @@ object Eclat extends AssociationRulesFinder {
   def mergeFrequentItems(
       generators: ItemSetGenerators,
       itemSetMeta: ItemSetMeta,
-      minSupport: MinSupport,
-      itemSetSize: Int
+      minSupport: MinSupport
   ): (ItemSetGenerators, ItemSetMeta) = {
     val itemSets: Set[(ItemSet, ItemSet)] =
       potentialItemSets(generators, itemSetMeta)
@@ -124,7 +125,7 @@ object Eclat extends AssociationRulesFinder {
             meta,
             left,
             right
-          ).txs.size >= minSupport.n =>
+          ).txs.size >= minSupport.value =>
         val product: ItemSet = left ++ right
         val productSupport =
           Support(meta(left).support.txs ++ meta(right).support.txs)

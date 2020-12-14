@@ -1,4 +1,4 @@
 package com.mkobiers.med
 package domain
 
-case class Confidence(score: BigDecimal)
+case class Confidence(value: BigDecimal) extends AnyVal

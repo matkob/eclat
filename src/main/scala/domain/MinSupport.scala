@@ -1,4 +1,4 @@
 package com.mkobiers.med
 package domain
 
-case class MinSupport(n: Int) extends AnyVal
+case class MinSupport(value: Int) extends AnyVal
