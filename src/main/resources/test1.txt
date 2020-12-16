@@ -1,5 +1,5 @@
-abc
-abc
-abc
-ab
-bcd
+a b c
+a b c
+a b c
+a b
+b c   d

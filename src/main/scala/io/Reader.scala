@@ -19,7 +19,7 @@ object Reader {
         .getLines()
         .zip(Iterator.iterate[Long](0L)(_ + 1L))
         .map { case (line, idx) =>
-          Transaction(TransactionId(idx), line.map(Item).toVector)
+          Transaction(TransactionId(idx), line.split(" +").map(Item).toVector)
         }
         .toVector
       source.close()

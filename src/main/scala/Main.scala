@@ -10,7 +10,7 @@ import scala.util.Try
 object Main extends App {
 
   val errorMapper: Throwable => Int = {
-    case _: ArrayIndexOutOfBoundsException | NumberFormatException =>
+    case _: ArrayIndexOutOfBoundsException | _: NumberFormatException =>
       println(
         s"provided arguments are wrong or incomplete: ${args.mkString(" ")}"
       )
