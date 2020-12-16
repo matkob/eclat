@@ -60,13 +60,12 @@ object Metric {
       successor: ItemSet,
       confidence: Confidence,
       itemSetMeta: Map[ItemSet, Support],
-      transactions: Vector[Transaction]
+      transactionIds: Set[TransactionId]
   ): Vector[Metric] = {
-    val transactionIds     = transactions.map(_.id).toSet
     val predecessorSupport = itemSetMeta(predecessor)
     val successorSupport   = itemSetMeta(successor)
     val successorProbability =
-      BigDecimal(successorSupport.txs.size) / BigDecimal(transactions.size)
+      BigDecimal(successorSupport.txs.size) / BigDecimal(transactionIds.size)
 
     val lift =
       LiftIndex(confidence, successorProbability)

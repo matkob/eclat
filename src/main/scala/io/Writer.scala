@@ -11,7 +11,7 @@ object Writer {
 
   def write(
       file: File,
-      rules: Vector[Rule]
+      rules: Iterable[Rule]
   ): Either[ApplicationError, Unit] = {
     Try {
       val writer = new PrintWriter(file)

@@ -8,7 +8,7 @@ trait AssociationRulesFinder {
       transactions: Vector[Transaction],
       minSupport: MinSupport,
       minConfidence: MinConfidence
-  ): Vector[Rule]
+  ): Map[RuleId, Rule]
 
   def frequentItemSets(
       transactions: Vector[Transaction],

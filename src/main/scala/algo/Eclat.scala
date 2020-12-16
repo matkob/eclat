@@ -3,17 +3,34 @@ package algo
 
 import domain._
 
+import org.slf4j.{Logger, LoggerFactory}
+
 object Eclat extends AssociationRulesFinder {
+
+  case class PartialResult(
+      generators: ItemSetGenerators,
+      itemSetMeta: ItemSetMeta
+  )
+
+  val log: Logger = LoggerFactory.getLogger(Eclat.getClass)
 
   override def associationRules(
       transactions: Vector[Transaction],
       minSupport: MinSupport,
       minConfidence: MinConfidence
-  ): Vector[Rule] = {
+  ): Map[RuleId, Rule] = {
+    log.info("searching for frequent item sets")
     val fItemSets = frequentItemSets(transactions, minSupport)
-    fItemSets.keys.filter(_.nonEmpty).foldLeft(Vector.empty[Rule]) {
+    log.info(s"${fItemSets.size} frequent item sets found")
+    val transactionIds = transactions.map(_.id).toSet
+    fItemSets.keys.filter(_.nonEmpty).foldLeft(Map.empty[RuleId, Rule]) {
       (rlz, itemSet) =>
-        rlz ++ rulesFromItemSet(itemSet, fItemSets, minConfidence, transactions)
+        rlz ++ rulesFromItemSet(
+          itemSet,
+          fItemSets,
+          minConfidence,
+          transactionIds
+        )
     }
   }
 
@@ -21,59 +38,64 @@ object Eclat extends AssociationRulesFinder {
       itemSet: ItemSet,
       itemSetSupport: Map[ItemSet, Support],
       minConfidence: MinConfidence,
-      transactions: Vector[Transaction]
-  ): Vector[Rule] = {
+      transactionIds: Set[TransactionId]
+  ): Map[RuleId, Rule] = {
     itemSet
       .subsets()
-      .map(predecessor => predecessor -> itemSet.diff(predecessor))
-      .filter { case (predecessor, successor) =>
-        predecessor.nonEmpty && successor.nonEmpty
-      }
-      .filter { case (predecessor, successor) =>
-        itemSetSupport.contains(predecessor) && itemSetSupport.contains(
-          successor
+      .map(predecessor => RuleId(predecessor, itemSet.diff(predecessor)))
+      .filter(ruleId =>
+        ruleId.predecessor.nonEmpty && ruleId.successor.nonEmpty
+      )
+      .filter(ruleId =>
+        itemSetSupport.contains(ruleId.predecessor) && itemSetSupport.contains(
+          ruleId.successor
         )
-      }
-      .map { case (predecessor, successor) =>
-        val confidence = Confidence(
+      )
+      .map(ruleId => {
+        ruleId -> Confidence(
           itemSetSupport(itemSet).txs.size / itemSetSupport(
-            predecessor
+            ruleId.predecessor
           ).txs.size
         )
+      })
+      .filter { case (_, confidence) =>
+        confidence.value >= minConfidence.value
+      }
+      .map { case (ruleId, confidence) =>
         val metrics = Metric.calculate(
-          predecessor,
-          successor,
+          ruleId.predecessor,
+          ruleId.successor,
           confidence,
           itemSetSupport,
-          transactions
+          transactionIds
         )
-        Rule(
-          predecessor,
-          successor,
+        ruleId -> Rule(
+          ruleId,
           itemSetSupport(itemSet),
           confidence,
           metrics
         )
       }
-      .filter(_.confidence.value > minConfidence.value)
-      .toVector
+      .toMap
   }
 
   override def frequentItemSets(
       transactions: Vector[Transaction],
       minSupport: MinSupport
   ): Map[ItemSet, Support] = {
+    log.info(s"checking item sets of length equal 1")
     // operate on raw transaction set only once
     val itemSetMeta: ItemSetMeta      = frequentItems(transactions, minSupport)
     val generators: ItemSetGenerators = itemSetMeta.keys.toVector
-    val biggestTx                     = transactions.map(_.items.size).max
+    val biggestTx: Int                = transactions.map(_.items.size).max
     // merge all item sets with an assumption that maximal size of frequent item set can not exceed maximal tx size
-    val _, support = (1 to biggestTx).foldLeft(
-      (generators: ItemSetGenerators, itemSetMeta: ItemSetMeta)
-    ) { case ((generators, meta), _) =>
-      mergeFrequentItems(generators, meta, minSupport)
-    }
-    support._2.map { case (itemSet, meta) => itemSet -> meta.support }
+    val result =
+      (2 to biggestTx).foldLeft(PartialResult(generators, itemSetMeta)) {
+        case (PartialResult(gens, meta), length) =>
+          log.info(s"checking item sets of length equal $length")
+          mergeFrequentItems(gens, meta, minSupport)
+      }
+    result.itemSetMeta.map { case (itemSet, meta) => itemSet -> meta.support }
   }
 
   def frequentItems(
@@ -114,14 +136,14 @@ object Eclat extends AssociationRulesFinder {
       generators: ItemSetGenerators,
       itemSetMeta: ItemSetMeta,
       minSupport: MinSupport
-  ): (ItemSetGenerators, ItemSetMeta) = {
+  ): PartialResult = {
     val itemSets: Set[(ItemSet, ItemSet)] =
       potentialItemSets(generators, itemSetMeta)
 
     itemSets.foldLeft(
-      (Vector.empty[ItemSet]: ItemSetGenerators, itemSetMeta: ItemSetMeta)
+      PartialResult(Vector.empty[ItemSet], itemSetMeta)
     ) {
-      case ((nextGenerators, meta), (left, right))
+      case (PartialResult(nextGens, meta), (left, right))
           if combinedItemSetSupport(
             meta,
             left,
@@ -134,8 +156,8 @@ object Eclat extends AssociationRulesFinder {
         val nextMeta = meta + (left -> meta(left).copy(successors =
           meta(left).successors + product
         )) + (product -> productMeta)
-        (nextGenerators :+ product, nextMeta)
-      case ((nextGenerators, meta), _) => (nextGenerators, meta)
+        PartialResult(nextGens :+ product, nextMeta)
+      case (res: PartialResult, _) => res
     }
   }
 

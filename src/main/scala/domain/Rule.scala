@@ -4,8 +4,7 @@ package domain
 import scala.math.BigDecimal.RoundingMode
 
 case class Rule(
-    predecessor: ItemSet,
-    successor: ItemSet,
+    id: RuleId,
     support: Support,
     confidence: Confidence,
     metrics: Vector[Metric]
@@ -13,8 +12,8 @@ case class Rule(
 
 object Rule {
   def text(rule: Rule): String = {
-    val predecessors = rule.predecessor.map(_.value).mkString(", ")
-    val successors   = rule.successor.map(_.value).mkString(", ")
+    val predecessors = rule.id.predecessor.map(_.value).mkString(", ")
+    val successors   = rule.id.successor.map(_.value).mkString(", ")
     val metrics = if (rule.metrics.nonEmpty) {
       rule.metrics
         .map(m => s"${m.getClass.getSimpleName}=${Metric.text(m)}")

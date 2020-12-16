@@ -8,7 +8,8 @@ idePackagePrefix := Some("com.mkobiers.med")
 
 Compile / mainClass := Some("com.mkobiers.med.Main")
 
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
+libraryDependencies += "org.scalactic" %% "scalactic"       % "3.2.2"
+libraryDependencies += "org.scalatest" %% "scalatest"       % "3.2.2" % "test"
 
 scalacOptions ++= Seq("-deprecation", "-feature")

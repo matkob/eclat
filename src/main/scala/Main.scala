@@ -1,7 +1,7 @@
 package com.mkobiers.med
 
 import algo.Eclat
-import domain.{FileNotAccessible, MinConfidence, MinSupport, Rule}
+import domain._
 import io.{Reader, Writer}
 
 import java.io.File
@@ -23,7 +23,7 @@ object Main extends App {
       1
   }
 
-  val resultMapper: Vector[Rule] => Int = {
+  val resultMapper: Map[RuleId, Rule] => Int = {
     case rules if rules.nonEmpty =>
       println(s"${rules.size} association rules found")
       0
@@ -41,7 +41,7 @@ object Main extends App {
     rules         <- Right(Eclat.associationRules(txs, minSupport, minConfidence))
     _ <- Writer.write(
       output,
-      rules
+      rules.values
     )
   } yield rules
 
