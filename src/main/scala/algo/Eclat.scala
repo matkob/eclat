@@ -128,7 +128,7 @@ object Eclat extends AssociationRulesFinder {
           ).txs.size >= minSupport.value =>
         val product: ItemSet = left ++ right
         val productSupport =
-          Support(meta(left).support.txs ++ meta(right).support.txs)
+          Support(meta(left).support.txs intersect meta(right).support.txs)
         val productMeta = ItemSetMetaData(product, productSupport, left)
         val nextMeta = meta + (left -> meta(left).copy(successors =
           meta(left).successors + product
@@ -148,7 +148,7 @@ object Eclat extends AssociationRulesFinder {
       case (acc, predecessor) =>
         val successorPairs = for {
           gen1 <- itemSetMeta(predecessor).successors
-          gen2 <- itemSetMeta(predecessor).successors
+          gen2 <- itemSetMeta(predecessor).successors.filterNot(_ == gen1)
         } yield {
           // prevent pair duplicates
           if (gen1.hashCode() > gen2.hashCode()) gen1 -> gen2 else gen2 -> gen1
