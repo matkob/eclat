@@ -10,3 +10,5 @@ Compile / mainClass := Some("com.mkobiers.med.Main")
 
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+
+scalacOptions ++= Seq("-deprecation", "-feature")

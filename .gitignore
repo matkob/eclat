@@ -2,3 +2,4 @@
 .bsp
 target/
 src/main/resources/*out*
+data/*out*

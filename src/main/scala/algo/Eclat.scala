@@ -23,7 +23,8 @@ object Eclat extends AssociationRulesFinder {
       minConfidence: MinConfidence,
       transactions: Vector[Transaction]
   ): Vector[Rule] = {
-    itemSet.subsets
+    itemSet
+      .subsets()
       .map(predecessor => predecessor -> itemSet.diff(predecessor))
       .filter { case (predecessor, successor) =>
         predecessor.nonEmpty && successor.nonEmpty

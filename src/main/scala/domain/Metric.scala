@@ -25,10 +25,10 @@ case class CertaintyFactor(
       Try(
         (higher.value - successorProbability) / (1 - successorProbability)
       ).toOption
-    case same if same.value == successorProbability =>
-      Some(BigDecimal(0))
     case lower if lower.value < successorProbability =>
       Try(-(successorProbability - lower.value) / successorProbability).toOption
+    case _ =>
+      Some(BigDecimal(0))
   }
 }
 
