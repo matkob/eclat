@@ -6,3 +6,5 @@ sealed trait ApplicationError extends Throwable
 case object FileNotAccessible extends ApplicationError
 
 case object EmptyTransactionSet extends ApplicationError
+
+case object FileNotWritable extends ApplicationError

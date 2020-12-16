@@ -17,14 +17,13 @@ object Rule {
     val successors   = rule.successor.map(_.value).mkString(", ")
     val metrics = if (rule.metrics.nonEmpty) {
       rule.metrics
-        .map(m => s"${m.getClass.getSimpleName}: ${Metric.text(m)}")
-        .mkString("\n\t", "\n\t", "")
+        .map(m => s"${m.getClass.getSimpleName}=${Metric.text(m)}")
+        .mkString(" ")
     } else {
       "none"
     }
-    s"""Rule $predecessors -> $successors
-       | support=${rule.support.txs.size}
-       | confidence=${rule.confidence.value.setScale(3, RoundingMode.DOWN)}
-       | metrics: $metrics""".stripMargin
+    val support    = rule.support.txs.size
+    val confidence = rule.confidence.value.setScale(3, RoundingMode.DOWN)
+    s"[$predecessors] -> [$successors] support=$support confidence=$confidence metrics: $metrics"
   }
 }

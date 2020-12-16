@@ -6,5 +6,5 @@ Eclat algorithm written in functional style
 ### Running
 Example run arguments:
 ```bash
-sbt run src/main/resources/test1.txt 2
+sbt run src/main/resources/test1.txt src/main/resources/test1_out.txt 2 0.1
 ```
