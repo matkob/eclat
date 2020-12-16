@@ -27,6 +27,7 @@ object Eclat extends AssociationRulesFinder {
       (rlz, itemSet) =>
         rlz ++ rulesFromItemSet(
           itemSet,
+          id => !rlz.contains(id),
           fItemSets,
           minConfidence,
           transactionIds
@@ -36,6 +37,7 @@ object Eclat extends AssociationRulesFinder {
 
   def rulesFromItemSet(
       itemSet: ItemSet,
+      ruleFilter: RuleId => Boolean,
       itemSetSupport: Map[ItemSet, Support],
       minConfidence: MinConfidence,
       transactionIds: Set[TransactionId]
@@ -43,6 +45,7 @@ object Eclat extends AssociationRulesFinder {
     itemSet
       .subsets()
       .map(predecessor => RuleId(predecessor, itemSet.diff(predecessor)))
+      .filter(ruleFilter)
       .filter(ruleId =>
         ruleId.predecessor.nonEmpty && ruleId.successor.nonEmpty
       )
@@ -52,11 +55,9 @@ object Eclat extends AssociationRulesFinder {
         )
       )
       .map(ruleId => {
-        ruleId -> Confidence(
-          itemSetSupport(itemSet).txs.size / itemSetSupport(
-            ruleId.predecessor
-          ).txs.size
-        )
+        val baseSup = BigDecimal(itemSetSupport(itemSet).txs.size)
+        val predSup = BigDecimal(itemSetSupport(ruleId.predecessor).txs.size)
+        ruleId -> Confidence(baseSup / predSup)
       })
       .filter { case (_, confidence) =>
         confidence.value >= minConfidence.value
