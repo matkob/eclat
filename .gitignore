@@ -3,3 +3,6 @@
 target/
 src/main/resources/*out*
 data/*out*
+graph/
+tmp/
+venv/

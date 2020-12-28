@@ -25,6 +25,7 @@ object Eclat extends AssociationRulesFinder {
     val transactionIds = transactions.map(_.id).toSet
     fItemSets.keys.filter(_.nonEmpty).foldLeft(Map.empty[RuleId, Rule]) {
       (rlz, itemSet) =>
+        log.info(s"generated rules: ${rlz.size}")
         rlz ++ rulesFromItemSet(
           itemSet,
           id => !rlz.contains(id),
