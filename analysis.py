@@ -9,25 +9,17 @@ import seaborn as sns
 
 DATA_DIR = "data"
 GRAPH_DIR = "graph"
-TMP_DIR = "tmp"
 pathlib.Path(GRAPH_DIR).mkdir(parents=True, exist_ok=True)
-pathlib.Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
 mpl.rcParams['agg.path.chunksize'] = 10000
 
 
 def read_results(path):
-    temp_data_path = f"{TMP_DIR}/parsed_results.pkl"
-    if pathlib.Path(temp_data_path).exists():
-        return pd.read_pickle(temp_data_path)
-
     with open(path) as file:
         lines = file.readlines()
     all_metrics = []
     for line in lines:
         metrics = re.findall("metrics: .*", line)[0][9:]
         all_metrics.append(parse_metrics(metrics))
-    df = pd.DataFrame(data=all_metrics)
-    df.to_pickle(temp_data_path)
     return pd.DataFrame(data=all_metrics)
 
 
@@ -39,7 +31,7 @@ def parse_metrics(metrics):
 def create_plots(data: pd.DataFrame, metric: str):
     data[metric].hist()
     save_plt_fig(f"{GRAPH_DIR}/hist_{metric}.png")
-    data.plot(x="LiftIndex", y=metric)
+    data.plot.scatter(x="LiftIndex", y=metric)
     save_plt_fig(f"{GRAPH_DIR}/plot_{metric}.png")
 
 
@@ -63,7 +55,12 @@ def plot_corr_mtx(data: pd.DataFrame):
     )
 
 
-results = read_results(f"{DATA_DIR}/agaricus-lepiota-out_3k_0.5.data")
+rules = [
+    read_results(f"{DATA_DIR}/agaricus-lepiota-out_3k_0.5.data"),
+    read_results(f"{DATA_DIR}/car-out_80_0.2.data"),
+    read_results(f"{DATA_DIR}/tic-tac-toe-out_20_0.2.data")
+]
+results = pd.concat(rules, ignore_index=True)
 plot_corr_mtx(results)
 save_plt_fig(f"{GRAPH_DIR}/correlation.png")
 print(results["LiftIndex"].describe())
